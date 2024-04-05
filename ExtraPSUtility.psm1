@@ -20,6 +20,24 @@ Function Select-Expand {
 
     The input object will be bound to '$_' in the script.
 
+    .PARAMETER OuterProperty
+    Decides which properties from the outer value should be included in the results.
+
+    This does not affect the value of '$_' passed to the ExpandScript.
+
+    .PARAMETER OuterExclude
+    Exclude outer value properties from the final result.
+
+    This does not affect the value of '$_' passed to the ExpandScript.
+
+    .PARAMETER OuterName
+    Assign the outer values to a property with this given name instead of
+    flattening them.
+
+    .PARAMETER InnerName
+    Assign the inner values to a property with this given name instead of
+    flattening them.
+
     .EXAMPLE
     PS> class A { $a ; $b ; }
     PS> class B { $c }
@@ -59,13 +77,41 @@ Function Select-Expand {
         [PSObject]$InputObject,
 
         [Parameter(Mandatory=$true, Position=0)]
-        [ScriptBlock]$ExpandScript
+        [ScriptBlock]$ExpandScript,
+
+        [Parameter(Mandatory=$false)]
+        [SupportsWildcards()]
+        [Object[]]$OuterProperty,
+
+        [Parameter(Mandatory=$false)]
+        [String[]]$OuterExclude,
+
+        [Parameter(Mandatory=$false)]
+        [string]$OuterName,
+
+        [Parameter(Mandatory=$false)]
+        [string]$InnerName
     )
     Process {
-        Select-Object -InputObject $InputObject -Property *,@{n='_tmpProp'; e={
-            [PSVariable[]]$context = [PSVariable]::new('_', $_)
+        [PSVariable[]]$context = [PSVariable]::new('_', $InputObject)
+        $outerProp = if ($OuterName) {@{
+            n = $OuterName
+            e = {
+                $InputObject |Select-Object -Property $OuterProperty -ExcludeProperty $OuterExclude
+            }
+        }} elseif ($OuterProperty)  {
+            $OuterProperty
+        } else { '*' }
+
+        if ($InnerName) {
             $ExpandScript.InvokeWithContext(@{}, $context, @())
-        }}|Select-Object -ExcludeProperty '_tmpProp' -ExpandProperty '_tmpProp'
+            |Select-Object -Property $outerProp,@{n=$InnerName; e={$_}}
+        } else {
+            Select-Object -InputObject $InputObject -Property $outerProp,@{n='_tmp_FIM9I0IJTBYVMRDEYY2O'; e={
+                $ExpandScript.InvokeWithContext(@{}, $context, @())
+            }} -ExcludeProperty $OuterExclude
+            |Select-Object -ExcludeProperty '_tmp_FIM9I0IJTBYVMRDEYY2O' -ExpandProperty '_tmp_FIM9I0IJTBYVMRDEYY2O'
+        }
     }
 }
 
