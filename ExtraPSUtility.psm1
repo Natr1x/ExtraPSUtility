@@ -38,6 +38,10 @@ Function Select-Expand {
     AAA BBB 4
     AAA BBB 5
 
+    .NOTES
+    OriginalAuthor: Natr1x
+    OriginalAuthorEmail: osken_o.s@hotmail.com
+
     .INPUTS
     [PSObject]
     You can pipe objects to this cmdlet.
